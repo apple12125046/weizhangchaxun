@@ -137,8 +137,8 @@
     </footer>
   </div>
   
-  <!-- 引入SheetJS库用于解析Excel文件 -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- 引入SheetJS库用于解析Excel文件 - 更换为unpkg CDN -->
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
   
   <!-- 引入钉钉JSAPI -->
   <script src="https://g.alicdn.com/dingding/open-develop/1.6.0/dingtalk.js"></script>
@@ -243,7 +243,12 @@
       }
       
       // 解析Excel文件
-      function parseExcel(file) {
+      async function parseExcel(file) {
+        // 检查XLSX库是否已加载
+        if (typeof XLSX === 'undefined') {
+          throw new Error('Excel解析库加载失败，请刷新页面重试');
+        }
+        
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
           
