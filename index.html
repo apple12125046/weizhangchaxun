@@ -103,6 +103,7 @@
           <div>
             <h3 class="text-red-500 font-medium mb-1">加载数据失败</h3>
             <p id="errorMessage" class="text-neutral"></p>
+            <pre id="dataPreview" class="text-xs bg-gray-100 p-3 mt-2 rounded overflow-x-auto hidden"></pre>
             <button id="retryButton" class="mt-3 text-primary hover:text-primary/80 flex items-center">
               <i class="fa fa-refresh mr-1"></i> 重试
             </button>
@@ -135,6 +136,7 @@
     const loadingIndicator = document.getElementById('loadingIndicator');
     const errorContainer = document.getElementById('errorContainer');
     const errorMessage = document.getElementById('errorMessage');
+    const dataPreview = document.getElementById('dataPreview');
     const retryButton = document.getElementById('retryButton');
     
     // 初始化
@@ -183,32 +185,53 @@
           if (!response.ok) {
             throw new Error(`HTTP错误，状态码: ${response.status}`);
           }
-          return response.json();
+          return response.text(); // 获取原始文本数据
         })
-        .then(data => {
-          // 验证数据格式
-          if (!Array.isArray(data) || data.length === 0) {
-            throw new Error('数据格式不正确，应为非空数组');
-          }
-          
-          // 检查必要的字段
-          const firstItem = data[0];
-          const requiredFields = ['违章代码', '具体违章现象', '违章类型', '扣分对象', '安全生产禁令'];
-          
-          for (const field of requiredFields) {
-            if (!(field in firstItem)) {
-              throw new Error(`数据缺少必要的字段: ${field}`);
+        .then(textData => {
+          // 尝试解析JSON
+          try {
+            const data = JSON.parse(textData);
+            
+            // 保存原始数据用于调试
+            window.rawData = data;
+            
+            // 验证数据格式
+            if (!Array.isArray(data) || data.length === 0) {
+              throw new Error(`数据格式不正确，应为非空数组。实际类型: ${typeof data}`);
             }
+            
+            // 检查必要的字段
+            const firstItem = data[0];
+            const requiredFields = ['违章代码', '具体违章现象', '违章类型', '扣分对象', '安全生产禁令'];
+            
+            for (const field of requiredFields) {
+              if (!(field in firstItem)) {
+                throw new Error(`数据缺少必要的字段: ${field}`);
+              }
+            }
+            
+            // 保存数据
+            violationData = data;
+            
+            // 隐藏加载状态
+            loadingIndicator.classList.add('hidden');
+            
+            // 显示成功消息
+            console.log(`成功加载 ${data.length} 条违章代码数据`);
+          } catch (parseError) {
+            // 显示解析错误
+            errorMessage.textContent = `解析JSON失败: ${parseError.message}`;
+            
+            // 显示数据预览（截取前500个字符）
+            dataPreview.textContent = textData.substring(0, 500) + (textData.length > 500 ? '...' : '');
+            dataPreview.classList.remove('hidden');
+            
+            errorContainer.classList.remove('hidden');
+            loadingIndicator.classList.add('hidden');
+            
+            console.error('JSON解析错误:', parseError);
+            console.log('原始数据:', textData.substring(0, 500));
           }
-          
-          // 保存数据
-          violationData = data;
-          
-          // 隐藏加载状态
-          loadingIndicator.classList.add('hidden');
-          
-          // 显示成功消息
-          console.log(`成功加载 ${data.length} 条违章代码数据`);
         })
         .catch(error => {
           // 隐藏加载状态
